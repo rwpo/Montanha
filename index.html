@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Escalada do Cume - RPG Pixel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #111625;
+      --panel-bg: #1e2638;
+      --panel-border: #4b5975;
+      --accent-gold: #ffcc00;
+      --accent-green: #2ecc71;
+      --accent-red: #e74c3c;
+      --text-light: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Press Start 2P', monospace;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 15px;
+      width: 100%;
+      max-width: 1100px;
+      background: #0a0d14;
+      border: 4px solid var(--panel-border);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+
+    @media (max-width: 850px) {
+      .game-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- CENÁRIO ISOMÉTRICO EM PIXEL ART --- */
+    .viewport {
+      position: relative;
+      height: 520px;
+      background: linear-gradient(180deg, #4b7bec 0%, #74b9ff 60%, #a6dcef 100%);
+      border: 4px solid var(--panel-border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    /* Montanha principal */
+    .mountain-base {
+      position: absolute;
+      bottom: -20px;
+      left: 10%;
+      width: 0;
+      height: 0;
+      border-left: 220px solid transparent;
+      border-right: 220px solid transparent;
+      border-bottom: 460px solid #576574;
+    }
+
+    .mountain-peak-snow {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 60px solid transparent;
+      border-right: 60px solid transparent;
+      border-bottom: 120px solid #f1f2f6;
+    }
+
+    .flag {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      font-size: 20px;
+      transform: translateX(-50%);
+      z-index: 5;
+    }
+
+    /* Trilho de Degraus Numerados (Subindo da Base ao Cume) */
+    .path-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .step-tile {
+      position: absolute;
+      width: 28px;
+      height: 18px;
+      background-color: #8395a7;
+      border: 2px solid #222f3e;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: #fff;
+      box-shadow: 0 3px 0 #222f3e;
+      transition: background 0.3s;
+    }
+
+    .step-tile.active {
+      background-color: var(--accent-gold);
+      color: #000;
+    }
+
+    /* Personagem Genérico (Aventureiro/Viajante com Túnica e Cajado) */
+    .adventurer {
+      position: absolute;
+      width: 32px;
+      height: 42px;
+      transition: all 0.5s ease-in-out;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .adventurer-body {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hood {
+      width: 16px;
+      height: 16px;
+      background: #8e44ad;
+      border-radius: 50% 50% 0 0;
+      margin: 0 auto;
+      border: 2px solid #2c3e50;
+    }
+    .robe {
+      width: 22px;
+      height: 22px;
+      background: #8e44ad;
+      margin: -2px auto 0;
+      border-radius: 4px 4px 0 0;
+      border: 2px solid #2c3e50;
+    }
+    .staff {
+      position: absolute;
+      right: 0px;
+      top: 6px;
+      width: 3px;
+      height: 34px;
+      background: #795548;
+      border: 1px solid #3e2723;
+    }
+    .staff-orb {
+      position: absolute;
+      right: -2px;
+      top: 2px;
+      width: 7px;
+      height: 7px;
+      background: #00d2d3;
+      border-radius: 50%;
+    }
+
+    /* Painéis de Status no Cenário */
+    .hud-box {
+      position: absolute;
+      background: var(--panel-bg);
+      border: 3px solid var(--panel-border);
+      padding: 8px;
+      font-size: 9px;
+      line-height: 1.4;
+      z-index: 6;
+      border-radius: 4px;
+    }
+
+    .hud-top-left { top: 10px; left: 10px; }
+    .hud-bottom-left { bottom: 10px; left: 10px; }
+    .hud-bottom-center { bottom: 10px; left: 50%; transform: translateX(-50%); width: 200px; text-align: center; }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: #111;
+      border: 1px solid var(--panel-border);
+      margin-top: 4px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent-gold);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* --- PAINEL LATERAL (PERGUNTAS / DESAFIOS) --- */
+    .quiz-panel {
+      background: var(--panel-bg);
+      border: 4px solid var(--panel-border);
+      border-radius: 4px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 11px;
+      color: var(--accent-gold);
+      border-bottom: 2px dashed var(--panel-border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .question-box {
+      font-size: 10px;
+      line-height: 1.6;
+      margin-bottom: 10px;
+      min-height: 45px;
+    }
+
+    .display-area {
+      background: #111625;
+      border: 2px inset var(--panel-border);
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
+      border-radius: 4px;
+    }
+
+    .display-area div, .display-area svg {
+      max-width: 100%;
+      max-height: 100px;
+    }
+
+    .options-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .btn-pixel {
+      background: #2c3e50;
+      color: #fff;
+      border: 3px solid #4b6584;
+      padding: 10px 6px;
+      font-size: 9px;
+      cursor: pointer;
+      text-align: left;
+      border-radius: 4px;
+      transition: all 0.1s;
+    }
+
+    .btn-pixel:hover {
+      background: #4b6584;
+      border-color: var(--accent-gold);
+    }
+
+    .btn-action {
+      background: #27ae60;
+      border-color: #2ee59d;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    .btn-action:hover {
+      background: #2ee59d;
+      color: #000;
+    }
+
+    .feedback-text {
+      font-size: 9px;
+      height: 20px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .geo-shape-pixel {
+      background: #e74c3c;
+      border: 2px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 9px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-layout">
+  <!-- CANVAS / CENÁRIO ISOMÉTRICO -->
+  <div class="viewport">
+    <div class="flag">🚩</div>
+    <div class="mountain-base"></div>
+    <div class="mountain-peak-snow"></div>
+
+    <!-- Caminho de Níveis -->
+    <div id="path-container" class="path-container"></div>
+
+    <!-- Personagem Genérico -->
+    <div id="adventurer" class="adventurer">
+      <div class="adventurer-body">
+        <div class="staff-orb"></div>
+        <div class="staff"></div>
+        <div class="hood"></div>
+        <div class="robe"></div>
+      </div>
+    </div>
+
+    <!-- HUDs sobrepostos no cenário -->
+    <div class="hud-box hud-top-left">
+      CONTAGEM DE NÍVEL<br><br>
+      NÍVEL ATUAL:<br>
+      ⏳ <span id="hud-level" style="color: var(--accent-gold);">0</span> / 20
+    </div>
+
+    <div class="hud-box hud-bottom-left">
+      PARTIDA: <span id="hud-match">1</span> / 5<br><br>
+      <span style="font-size: 7px; color: #aaa;">ÁREAS / PERÍMETROS / SUBSTANTIVOS</span>
+    </div>
+
+    <div class="hud-box hud-bottom-center">
+      CONQUISTA DO CUME
+      <div class="progress-bar-bg">
+        <div id="progress-fill" class="progress-bar-fill"></div>
+      </div>
+      <span id="progress-text" style="font-size: 7px;">0%</span>
+    </div>
+  </div>
+
+  <!-- PAINEL LATERAL DE DESAFIOS -->
+  <div class="quiz-panel">
+    <div class="panel-title">DESAFIO DE SUBIDA</div>
+
+    <!-- Tela Inicial -->
+    <div id="start-screen">
+      <div class="question-box" style="text-align: center; margin-top: 20px;">
+        Ajude o(a) viajante a atingir o cume da montanha respondendo às 20 questões!
+      </div>
+      <button class="btn-pixel btn-action" style="width: 100%; margin-top: 40px;" onclick="startGame()">INICIAR ESCALADA</button>
+    </div>
+
+    <!-- Tela do Jogo -->
+    <div id="game-screen" style="display: none;">
+      <div id="question-text" class="question-box">Carregando...</div>
+      
+      <div id="display-area" class="display-area"></div>
+
+      <div id="options-container" class="options-list"></div>
+
+      <div id="feedback" class="feedback-text"></div>
+    </div>
+
+    <!-- Tela de Vitória -->
+    <div id="win-screen" style="display: none; text-align: center;">
+      <div class="question-box" style="color: var(--accent-gold); font-size: 11px;">
+        🏆 CUME CONQUISTADO!
+      </div>
+      <p style="font-size: 8px; line-height: 1.5; margin-bottom: 20px;">
+        Você respondeu todas as 20 perguntas com sucesso e alcançou o topo!
+      </p>
+      <button class="btn-pixel btn-action" style="width: 100%;" onclick="resetGame()">JOGAR NOVAMENTE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Coordenadas corrigidas:
+  // Nível 0 / Degrau 1 ficam na BASE DA MONTANHA (Embaixo, y: 10%)
+  // Nível 20 / Cume fica no TOPO DA MONTANHA (Em cima, y: 88%)
+  const pathCoordinates = [
+    { x: 18, y: 8 },   // Ponto de partida (Base)
+    { x: 22, y: 12 },  // Degrau 1
+    { x: 28, y: 16 },  // Degrau 2
+    { x: 34, y: 20 },  // Degrau 3
+    { x: 42, y: 24 },  // Degrau 4
+    { x: 50, y: 28 },  // Degrau 5
+    { x: 58, y: 32 },  // Degrau 6
+    { x: 52, y: 36 },  // Degrau 7
+    { x: 44, y: 40 },  // Degrau 8
+    { x: 38, y: 44 },  // Degrau 9
+    { x: 30, y: 48 },  // Degrau 10
+    { x: 36, y: 52 },  // Degrau 11
+    { x: 42, y: 56 },  // Degrau 12
+    { x: 50, y: 60 },  // Degrau 13
+    { x: 56, y: 64 },  // Degrau 14
+    { x: 52, y: 68 },  // Degrau 15
+    { x: 46, y: 72 },  // Degrau 16
+    { x: 42, y: 76 },  // Degrau 17
+    { x: 46, y: 80 },  // Degrau 18
+    { x: 48, y: 84 },  // Degrau 19
+    { x: 48, y: 88 }   // Degrau 20 (Cume / Topo)
+  ];
+
+  let currentLevel = 0;
+  let currentQuestions = [];
+  let currentQuestionIndex = 0;
+
+  function renderPath() {
+    const container = document.getElementById('path-container');
+    container.innerHTML = '';
+    
+    for (let i = 1; i <= 20; i++) {
+      const pos = pathCoordinates[i];
+      const tile = document.createElement('div');
+      tile.className = 'step-tile';
+      tile.id = `step-${i}`;
+      tile.style.left = `${pos.x}%`;
+      tile.style.bottom = `${pos.y}%`;
+      tile.innerText = i;
+      container.appendChild(tile);
+    }
+  }
+
+  function shuffleArray(arr) {
+    return arr.sort(() => Math.random() - 0.5);
+  }
+
+  function generateQuestionPool() {
+    const pool = [];
+
+    const nouns = [
+      { name: "GATO", icon: "🐱" }, { name: "ÁGUA", icon: "🌊" },
+      { name: "ÁRVORE", icon: "🌳" }, { name: "CARRO", icon: "🚗" },
+      { name: "FLOR", icon: "🌻" }, { name: "SOL", icon: "☀️" },
+      { name: "CASA", icon: "🏠" }, { name: "LIVRO", icon: "📖" },
+      { name: "BOLA", icon: "⚽" }, { name: "MAÇÃ", icon: "🍎" },
+      { name: "CHAVE", icon: "🔑" }, { name: "RELÓGIO", icon: "⏰" },
+      { name: "NAVIO", icon: "🚢" }, { name: "LÁPIS", icon: "✏️" }
+    ];
+
+    nouns.forEach((item, index) => {
+      const wrong = nouns.filter(n => n.name !== item.name).map(n => n.name);
+      shuffleArray(wrong);
+      pool.push({
+        id: `noun_${index}`,
+        text: "RELACIONE A IMAGEM AO SUBSTANTIVO CORRETO:",
+        display: `<div style="font-size: 50px;">${item.icon}</div>`,
+        options: shuffleArray([item.name, wrong[0], wrong[1], wrong[2]]),
+        correct: item.name
+      });
+    });
+
+    for (let i = 1; i <= 25; i++) {
+      const b = i + 1;
+      const h = i + 2;
+      const area = b * h;
+      pool.push({
+        id: `area_${i}`,
+        text: `QUAL É A ÁREA DA FIGURA (BASE × ALTURA)?`,
+        display: `<div class="geo-shape-pixel" style="width: 110px; height: 60px;">${b}m × ${h}m</div>`,
+        options: shuffleArray([`${area}m²`, `${area + 3}m²`, `${area - 1}m²`, `${(b+h)*2}m²`]),
+        correct: `${area}m²`
+      });
+    }
+
+    for (let i = 1; i <= 25; i++) {
+      const l = i + 2;
+      const per = l * 3;
+      pool.push({
+        id: `per_${i}`,
+        text: `QUAL É O PERÍMETRO DO TRIÂNGULO EQUILÁTERO?`,
+        display: `<div class="geo-shape-pixel" style="width:0; height:0; border-left:35px solid transparent; border-right:35px solid transparent; border-bottom:60px solid #e74c3c; background:none; color:#fff;"><span style="position:relative; top:25px; left:-12px;">${l}cm</span></div>`,
+        options: shuffleArray([`${per}cm`, `${per + 2}cm`, `${l * 2}cm`, `${per - 3}cm`]),
+        correct: `${per}cm`
+      });
+    }
+
+    return pool;
+  }
+
+  function getMatchData() {
+    return JSON.parse(localStorage.getItem('mountain_rpg_data') || '{"match": 1, "history": []}');
+  }
+
+  function saveMatchData(data) {
+    localStorage.setItem('mountain_rpg_data', JSON.stringify(data));
+  }
+
+  function startGame() {
+    const all = generateQuestionPool();
+    let data = getMatchData();
+
+    if (data.match > 5) {
+      data = { match: 1, history: [] };
+    }
+
+    let available = all.filter(q => !data.history.includes(q.id));
+    if (available.length < 20) {
+      data.history = [];
+      available = all;
+    }
+
+    shuffleArray(available);
+    currentQuestions = available.slice(0, 20);
+
+    data.history.push(...currentQuestions.map(q => q.id));
+    saveMatchData(data);
+
+    document.getElementById('hud-match').innerText = data.match;
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'block';
+
+    currentLevel = 0;
+    currentQuestionIndex = 0;
+    updateHeroPosition();
+    loadQuestion();
+  }
+
+  function loadQuestion() {
+    document.getElementById('feedback').innerText = '';
+    const q = currentQuestions[currentQuestionIndex];
+
+    document.getElementById('question-text').innerText = q.text;
+    document.getElementById('display-area').innerHTML = q.display;
+
+    const opts = document.getElementById('options-container');
+    opts.innerHTML = '';
+
+    q.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-pixel';
+      btn.innerText = `▶ ${opt}`;
+      btn.onclick = () => checkAnswer(opt, q.correct);
+      opts.appendChild(btn);
+    });
+  }
+
+  function checkAnswer(selected, correct) {
+    const feedback = document.getElementById('feedback');
+
+    if (selected === correct) {
+      currentLevel++;
+      currentQuestionIndex++;
+      feedback.style.color = 'var(--accent-green)';
+      feedback.innerText = 'CORRETO! SUBINDO...';
+      updateHeroPosition();
+
+      if (currentLevel >= 20) {
+        setTimeout(() => {
+          let data = getMatchData();
+          data.match += 1;
+          saveMatchData(data);
+          document.getElementById('game-screen').style.display = 'none';
+          document.getElementById('win-screen').style.display = 'block';
+        }, 800);
+      } else {
+        setTimeout(loadQuestion, 800);
+      }
+    } else {
+      feedback.style.color = 'var(--accent-red)';
+      feedback.innerText = 'INCORRETO! RETORNANDO À BASE...';
+      currentLevel = 0;
+      currentQuestionIndex = 0;
+      updateHeroPosition();
+      shuffleArray(currentQuestions);
+      setTimeout(loadQuestion, 1500);
+    }
+  }
+
+  function updateHeroPosition() {
+    document.getElementById('hud-level').innerText = currentLevel;
+    
+    const percentage = Math.round((currentLevel / 20) * 100);
+    document.getElementById('progress-fill').style.width = `${percentage}%`;
+    document.getElementById('progress-text').innerText = `${percentage}%`;
+
+    for (let i = 1; i <= 20; i++) {
+      const tile = document.getElementById(`step-${i}`);
+      if (tile) {
+        if (i <= currentLevel) {
+          tile.classList.add('active');
+        } else {
+          tile.classList.remove('active');
+        }
+      }
+    }
+
+    const pos = pathCoordinates[currentLevel];
+    const adv = document.getElementById('adventurer');
+    adv.style.left = `${pos.x}%`;
+    adv.style.bottom = `${pos.y}%`;
+  }
+
+  function resetGame() {
+    document.getElementById('win-screen').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'block';
+    currentLevel = 0;
+    updateHeroPosition();
+  }
+
+  renderPath();
+  updateHeroPosition();
+</script>
+</body>
+</html>
